@@ -1,0 +1,12 @@
+[package]
+name = "goodreads-metadata-scraper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.38"
+derive-new = "0.7.0"
+reqwest = { version = "0.12.9", features = ["blocking", "json"] }
+scraper = "0.21.0"
+serde_json = "1.0.132"
+urlencoding = "2.1.3"
