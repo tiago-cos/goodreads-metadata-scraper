@@ -1,22 +1,39 @@
+use crate::errors::ScraperError;
 use chrono::{DateTime, Utc};
+use derive_new::new;
+use regex::Regex;
 use reqwest::blocking::get;
 use scraper::{Html, Selector};
 use serde_json::Value;
 
-use crate::{
-    models::{BookMetadata, BookSeries, Contributor, ScraperError},
-    search::search_book,
-};
+#[derive(Debug, new, PartialEq)]
+pub struct BookMetadata {
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub description: Option<String>,
+    pub publisher: Option<String>,
+    pub publication_date: Option<DateTime<Utc>>,
+    pub isbn: Option<String>,
+    pub contributors: Vec<BookContributor>,
+    pub genres: Vec<String>,
+    pub series: Option<BookSeries>,
+    pub image_url: Option<String>,
+}
 
-pub fn search_metadata(
-    book_title: &str,
-    book_author: Option<&str>,
-) -> Result<Option<BookMetadata>, ScraperError> {
-    let goodreads_id = match search_book(book_title, book_author)? {
-        Some(id) => id,
-        None => return Ok(None),
-    };
-    let metadata = extract_metadata(&goodreads_id)?;
+#[derive(Debug, new, PartialEq)]
+pub struct BookContributor {
+    pub name: String,
+    pub role: String,
+}
+
+#[derive(Debug, new, PartialEq)]
+pub struct BookSeries {
+    pub title: String,
+    pub number: f32,
+}
+
+pub fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> {
+    let metadata = extract_book_metadata(&goodreads_id)?;
     let amazon_id = extract_amazon_id(&metadata, &goodreads_id);
 
     let (title, subtitle) = extract_title_and_subtitle(&metadata, &amazon_id);
@@ -42,10 +59,10 @@ pub fn search_metadata(
         image_url,
     );
 
-    Ok(Some(metadata))
+    Ok(metadata)
 }
 
-fn extract_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
+fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
     let url = format!("https://www.goodreads.com/book/show/{}", goodreads_id);
     let document = Html::parse_document(&get(&url)?.text()?);
     let metadata_selector = Selector::parse(r#"script[id="__NEXT_DATA__"]"#)?;
@@ -62,16 +79,14 @@ fn extract_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
 
 fn extract_amazon_id(metadata: &Value, goodreads_id: &str) -> String {
     let amazon_id_key = format!("getBookByLegacyId({{\"legacyId\":\"{}\"}})", goodreads_id);
-    metadata["props"]["pageProps"]["apolloState"]["ROOT_QUERY"][amazon_id_key]["__ref"]
-        .as_str()
-        .expect("Amazon ID must be a string")
-        .to_string()
+    let amazon_id =
+        &metadata["props"]["pageProps"]["apolloState"]["ROOT_QUERY"][amazon_id_key]["__ref"];
+    to_string(amazon_id).expect("Amazon ID must be present")
 }
 
 fn extract_title_and_subtitle(metadata: &Value, amazon_id: &str) -> (String, Option<String>) {
-    let title = metadata["props"]["pageProps"]["apolloState"][amazon_id]["title"]
-        .as_str()
-        .expect("Title must be a string");
+    let title = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["title"];
+    let title = to_string(title).expect("Title must be present");
 
     match title.split_once(":") {
         Some((title, subtitle)) => (title.to_string(), Some(subtitle.trim().to_string())),
@@ -80,18 +95,16 @@ fn extract_title_and_subtitle(metadata: &Value, amazon_id: &str) -> (String, Opt
 }
 
 fn extract_description(metadata: &Value, amazon_id: &str) -> Option<String> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["description"]
-        .as_str()
-        .map(|description| description.to_string())
+    let description = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["description"];
+    to_string(description)
 }
 
 fn extract_image_url(metadata: &Value, amazon_id: &str) -> Option<String> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["imageUrl"]
-        .as_str()
-        .map(|image_url| image_url.to_string())
+    let url = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["imageUrl"];
+    to_string(url)
 }
 
-fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<Contributor> {
+fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributor> {
     let mut contributors = Vec::new();
 
     let primary = metadata["props"]["pageProps"]["apolloState"][amazon_id]
@@ -99,14 +112,8 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<Contributor> {
         .as_object()
         .map(|obj| {
             (
-                obj["role"]
-                    .as_str()
-                    .expect("Contributor role must be a string")
-                    .to_string(),
-                obj["node"]["__ref"]
-                    .as_str()
-                    .expect("Contributor key must be a string")
-                    .to_string(),
+                to_string(&obj["role"]).expect("Contributor role must be present"),
+                to_string(&obj["node"]["__ref"]).expect("Contributor key must be present"),
             )
         })
         .expect("Primary contributor must be an object");
@@ -119,27 +126,19 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<Contributor> {
         .expect("Secondary contributors must be an array");
 
     for contributor in secondary {
-        let role = contributor["role"]
-            .as_str()
-            .expect("Contributor role must be a string")
-            .to_string();
-        let key = contributor["node"]["__ref"]
-            .as_str()
-            .expect("Contributor key must be a string")
-            .to_string();
+        let role = to_string(&contributor["role"]).expect("Contributor role must be present");
+        let key =
+            to_string(&contributor["node"]["__ref"]).expect("Contributor key must be present");
         contributors.push(fetch_contributor(metadata, (role, key)));
     }
 
     contributors
 }
 
-fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> Contributor {
-    let contributor = &metadata["props"]["pageProps"]["apolloState"][key];
-    let name = contributor["name"]
-        .as_str()
-        .expect("Name must be a string")
-        .to_string();
-    Contributor::new(name, role)
+fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> BookContributor {
+    let contributor = &metadata["props"]["pageProps"]["apolloState"][key]["name"];
+    let name = to_string(contributor).expect("Contributor name must be present");
+    BookContributor::new(name, role)
 }
 
 fn extract_genres(metadata: &Value, amazon_id: &str) -> Vec<String> {
@@ -147,32 +146,26 @@ fn extract_genres(metadata: &Value, amazon_id: &str) -> Vec<String> {
         .as_array()
         .expect("Genres must be an array")
         .iter()
-        .map(|genre| {
-            genre["genre"]["name"]
-                .as_str()
-                .expect("Genre name must be a string")
-                .to_string()
-        })
+        .map(|genre| to_string(&genre["genre"]["name"]).expect("Genre name must be present"))
         .collect()
 }
 
 fn extract_publisher(metadata: &Value, amazon_id: &str) -> Option<String> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publisher"]
-        .as_str()
-        .map(|publisher| publisher.to_string())
+    let publisher =
+        &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publisher"];
+    to_string(publisher)
 }
 
 fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTime<Utc>> {
     metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"]
         .as_i64()
         .map(|time| DateTime::from_timestamp_millis(time))
-        .expect("Publication date must be present")
+        .expect("Publication date must be a timestamp")
 }
 
 fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn"]
-        .as_str()
-        .map(|isbn| isbn.to_string())
+    let isbn = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn"];
+    to_string(isbn)
 }
 
 fn extract_series(metadata: &Value, amazon_id: &str) -> Option<BookSeries> {
@@ -183,20 +176,27 @@ fn extract_series(metadata: &Value, amazon_id: &str) -> Option<BookSeries> {
     if let Some(series) = series_array.first() {
         let position = series["userPosition"]
             .as_str()
-            .expect("Series position must be string")
+            .expect("Series position must be present")
             .parse::<f32>()
-            .expect("Float parsing failed");
-        let key = series["series"]["__ref"]
-            .as_str()
-            .expect("Series key must be string");
-        let title = metadata["props"]["pageProps"]["apolloState"][key]["title"]
-            .as_str()
-            .expect("Series title must be string")
-            .to_string();
+            .expect("Series position must be a number");
+
+        let key = to_string(&series["series"]["__ref"]).expect("Series key must be present");
+
+        let title = &metadata["props"]["pageProps"]["apolloState"][key]["title"];
+        let title = to_string(title).expect("Series title must be present");
+
         Some(BookSeries::new(title, position))
     } else {
         None
     }
+}
+
+fn to_string(value: &Value) -> Option<String> {
+    let re = Regex::new(r"\s{2,}").expect("Regex must be valid");
+    value
+        .as_str()
+        .map(|s| s.trim())
+        .map(|s| re.replace_all(s, " ").to_string())
 }
 
 #[cfg(test)]
@@ -204,15 +204,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_search_metadata() {
-        let title = "The Last Olympian";
-        let author = None;
-
+    fn fetch_metadata_test() {
         let expected_series = Some(BookSeries::new(
             "Percy Jackson and the Olympians".to_string(),
             5.0,
         ));
-        let expected_contributors = vec![Contributor::new(
+        let expected_contributors = vec![BookContributor::new(
             "Rick Riordan".to_string(),
             "Author".to_string(),
         )];
@@ -247,7 +244,7 @@ mod tests {
             Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1723393514i/4556058.jpg".to_string()),
         );
 
-        let metadata = search_metadata(title, author).unwrap();
-        assert_eq!(metadata, Some(expected_metadata));
+        let metadata = fetch_metadata("4556058").unwrap();
+        assert_eq!(metadata, expected_metadata);
     }
 }
