@@ -2,6 +2,52 @@ use grscraper::{
     BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder,
 };
 
+#[test]
+fn fetch_metadata_by_title_test() {
+    let title = "The Last Magician";
+    let metadata = MetadataRequestBuilder::default()
+        .with_title(title)
+        .execute()
+        .unwrap();
+
+    verify_metadata(metadata);
+}
+
+#[test]
+fn fetch_metadata_by_id_test() {
+    let id = "30312855";
+    let metadata = MetadataRequestBuilder::default()
+        .with_id(id)
+        .execute()
+        .unwrap();
+
+    verify_metadata(metadata);
+}
+
+#[test]
+fn fetch_metadata_by_isbn_test() {
+    let isbn = "1481432079";
+    let metadata = MetadataRequestBuilder::default()
+        .with_isbn(isbn)
+        .execute()
+        .unwrap();
+
+    verify_metadata(metadata);
+}
+
+#[test]
+fn fetch_metadata_by_title_with_author_test() {
+    let title = "The Last Magician";
+    let author = "Lisa Maxwell";
+    let metadata = MetadataRequestBuilder::default()
+        .with_title(title)
+        .with_author(author)
+        .execute()
+        .unwrap();
+
+    verify_metadata(metadata);
+}
+
 fn verify_metadata(metadata: Option<BookMetadata>) {
     let expected_series = BookSeries::new("The Last Magician".to_string(), 1.0);
     let expected_contributors = vec![BookContributor::new(
@@ -43,47 +89,4 @@ fn verify_metadata(metadata: Option<BookMetadata>) {
     );
 
     assert_eq!(metadata, Some(expected_metadata));
-}
-
-#[test]
-fn fetch_metadata_by_title_test() {
-    let title = "The Last Magician";
-    let metadata = MetadataRequestBuilder::new()
-        .with_title(title)
-        .execute()
-        .unwrap();
-
-    verify_metadata(metadata);
-}
-
-#[test]
-fn fetch_metadata_by_id_test() {
-    let id = "30312855";
-    let metadata = MetadataRequestBuilder::new().with_id(id).execute().unwrap();
-
-    verify_metadata(metadata);
-}
-
-#[test]
-fn fetch_metadata_by_isbn_test() {
-    let isbn = "1481432079";
-    let metadata = MetadataRequestBuilder::new()
-        .with_isbn(isbn)
-        .execute()
-        .unwrap();
-
-    verify_metadata(metadata);
-}
-
-#[test]
-fn fetch_metadata_by_title_with_author_test() {
-    let title = "The Last Magician";
-    let author = "Lisa Maxwell";
-    let metadata = MetadataRequestBuilder::new()
-        .with_title(title)
-        .with_author(author)
-        .execute()
-        .unwrap();
-
-    verify_metadata(metadata);
 }

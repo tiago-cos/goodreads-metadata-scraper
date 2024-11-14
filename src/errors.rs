@@ -1,9 +1,13 @@
 use scraper::error::SelectorErrorKind;
 
+/// Custom error type for handling errors in the Goodreads metadata scraper.
 #[derive(Debug)]
 pub enum ScraperError {
+    /// Error that occurs during the HTTP request to Goodreads, originating from `reqwest`.
     FetchError(reqwest::Error),
+    /// Error encountered while parsing the HTML document, originating from `scraper`.
     ParseError(scraper::error::SelectorErrorKind<'static>),
+    /// Error encountered during JSON serialization, originating from `serde_json`.
     SerializeError(serde_json::Error),
 }
 

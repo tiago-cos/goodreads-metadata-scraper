@@ -19,12 +19,19 @@ impl RequestState for IsbnState {}
 impl RequestState for TitleState {}
 impl RequestState for TitleWithAuthorState {}
 
+/// Builder for constructing a metadata request.
 pub struct MetadataRequestBuilder<T: RequestState> {
     state: T,
 }
 
+impl Default for MetadataRequestBuilder<EmptyState> {
+    fn default() -> Self {
+        MetadataRequestBuilder::new()
+    }
+}
+
 impl MetadataRequestBuilder<EmptyState> {
-    pub fn new() -> Self {
+    fn new() -> Self {
         MetadataRequestBuilder { state: EmptyState }
     }
 

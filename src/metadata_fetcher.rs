@@ -6,35 +6,52 @@ use reqwest::blocking::get;
 use scraper::{Html, Selector};
 use serde_json::Value;
 
+/// The primary data structure containing the metadata of a book.
 #[derive(Debug, new, PartialEq)]
 pub struct BookMetadata {
+    /// The main title of the book.
     pub title: String,
+    /// An optional subtitle of the book.
     pub subtitle: Option<String>,
+    /// An optional description or summary of the book.
     pub description: Option<String>,
+    /// The publisher of the book, if available.
     pub publisher: Option<String>,
+    /// The publication date of the book, represented as a UTC datetime.
     pub publication_date: Option<DateTime<Utc>>,
+    /// The ISBN of the book, if available.
     pub isbn: Option<String>,
+    /// A list of contributors to the book, each represented as a `BookContributor`.
     pub contributors: Vec<BookContributor>,
+    /// A list of genres associated with the book.
     pub genres: Vec<String>,
+    /// The series information, if the book is part of a series, represented as a `BookSeries`.
     pub series: Option<BookSeries>,
+    /// A URL to an image of the book's cover, if available.
     pub image_url: Option<String>,
 }
 
+/// Represents an individual who contributed to the book, such as an author or editor.
 #[derive(Debug, new, PartialEq)]
 pub struct BookContributor {
+    /// The name of the contributor.
     pub name: String,
+    /// The role of the contributor, such as "Author" or "Illustrator".
     pub role: String,
 }
 
+/// Represents series information for a book, including the series title and book's position within the series.
 #[derive(Debug, new, PartialEq)]
 pub struct BookSeries {
+    /// The title of the series.
     pub title: String,
+    /// The position of the book within the series, represented as a float to accommodate cases like "1.5".
     pub number: f32,
 }
 
 pub fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> {
-    let metadata = extract_book_metadata(&goodreads_id)?;
-    let amazon_id = extract_amazon_id(&metadata, &goodreads_id);
+    let metadata = extract_book_metadata(goodreads_id)?;
+    let amazon_id = extract_amazon_id(&metadata, goodreads_id);
 
     let (title, subtitle) = extract_title_and_subtitle(&metadata, &amazon_id);
     let description = extract_description(&metadata, &amazon_id);
@@ -159,7 +176,7 @@ fn extract_publisher(metadata: &Value, amazon_id: &str) -> Option<String> {
 fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTime<Utc>> {
     metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"]
         .as_i64()
-        .map(|time| DateTime::from_timestamp_millis(time))
+        .map(DateTime::from_timestamp_millis)
         .expect("Publication date must be a timestamp")
 }
 

@@ -51,7 +51,7 @@ pub fn fetch_id_from_title_and_author(
     title: &str,
     author: &str,
 ) -> Result<Option<String>, ScraperError> {
-    let results = search_books(&format!("{} {}", title, author))?;
+    let results = search_books(title)?;
 
     for (found_title, found_author, found_id) in results {
         if matches(&found_title, title) && matches(&found_author, author) {
@@ -59,7 +59,7 @@ pub fn fetch_id_from_title_and_author(
         }
     }
 
-    let results = search_books(title)?;
+    let results = search_books(&format!("{} {}", title, author))?;
 
     for (found_title, found_author, found_id) in results {
         if matches(&found_title, title) && matches(&found_author, author) {
@@ -89,7 +89,7 @@ fn search_books(query: &str) -> Result<Vec<(String, String, String)>, ScraperErr
             .value()
             .attr("href")
             .expect("Failed to extract link from search result");
-        let found_id = extract_goodreads_id(&found_link);
+        let found_id = extract_goodreads_id(found_link);
 
         results.push((found_title, found_author, found_id));
     }
