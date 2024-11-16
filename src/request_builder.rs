@@ -61,44 +61,44 @@ impl MetadataRequestBuilder<TitleState> {
         }
     }
 
-    pub fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
+    pub async fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
         let title = &self.state.0;
-        let goodreads_id = fetch_id_from_title(title)?;
+        let goodreads_id = fetch_id_from_title(title).await?;
         match goodreads_id {
-            Some(id) => Ok(Some(fetch_metadata(&id)?)),
+            Some(id) => Ok(Some(fetch_metadata(&id).await?)),
             None => Ok(None),
         }
     }
 }
 
 impl MetadataRequestBuilder<IdState> {
-    pub fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
+    pub async fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
         let id = &self.state.0;
-        if !verify_id_exists(id) {
+        if !verify_id_exists(id).await {
             return Ok(None);
         }
-        Ok(Some(fetch_metadata(id)?))
+        Ok(Some(fetch_metadata(id).await?))
     }
 }
 
 impl MetadataRequestBuilder<IsbnState> {
-    pub fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
+    pub async fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
         let isbn = &self.state.0;
-        let goodreads_id = fetch_id_from_isbn(isbn)?;
+        let goodreads_id = fetch_id_from_isbn(isbn).await?;
         match goodreads_id {
-            Some(id) => Ok(Some(fetch_metadata(&id)?)),
+            Some(id) => Ok(Some(fetch_metadata(&id).await?)),
             None => Ok(None),
         }
     }
 }
 
 impl MetadataRequestBuilder<TitleWithAuthorState> {
-    pub fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
+    pub async fn execute(&self) -> Result<Option<BookMetadata>, ScraperError> {
         let title = &self.state.0;
         let author = &self.state.1;
-        let goodreads_id = fetch_id_from_title_and_author(title, author)?;
+        let goodreads_id = fetch_id_from_title_and_author(title, author).await?;
         match goodreads_id {
-            Some(id) => Ok(Some(fetch_metadata(&id)?)),
+            Some(id) => Ok(Some(fetch_metadata(&id).await?)),
             None => Ok(None),
         }
     }

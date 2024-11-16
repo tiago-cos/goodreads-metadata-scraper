@@ -2,7 +2,7 @@ use crate::errors::ScraperError;
 use chrono::{DateTime, Utc};
 use derive_new::new;
 use regex::Regex;
-use reqwest::blocking::get;
+use reqwest::get;
 use scraper::{Html, Selector};
 use serde_json::Value;
 
@@ -49,8 +49,8 @@ pub struct BookSeries {
     pub number: f32,
 }
 
-pub fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> {
-    let metadata = extract_book_metadata(goodreads_id)?;
+pub async fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> {
+    let metadata = extract_book_metadata(goodreads_id).await?;
     let amazon_id = extract_amazon_id(&metadata, goodreads_id);
 
     let (title, subtitle) = extract_title_and_subtitle(&metadata, &amazon_id);
@@ -79,9 +79,9 @@ pub fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> 
     Ok(metadata)
 }
 
-fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
+async fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
     let url = format!("https://www.goodreads.com/book/show/{}", goodreads_id);
-    let document = Html::parse_document(&get(&url)?.text()?);
+    let document = Html::parse_document(&get(&url).await?.text().await?);
     let metadata_selector = Selector::parse(r#"script[id="__NEXT_DATA__"]"#)?;
     let metadata: Value = serde_json::from_str(
         &document
@@ -220,8 +220,8 @@ fn to_string(value: &Value) -> Option<String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn fetch_metadata_test() {
+    #[tokio::test]
+    async fn fetch_metadata_test() {
         let expected_series = Some(BookSeries::new(
             "Percy Jackson and the Olympians".to_string(),
             5.0,
@@ -261,7 +261,7 @@ mod tests {
             Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1723393514i/4556058.jpg".to_string()),
         );
 
-        let metadata = fetch_metadata("4556058").unwrap();
+        let metadata = fetch_metadata("4556058").await.unwrap();
         assert_eq!(metadata, expected_metadata);
     }
 }

@@ -1,18 +1,18 @@
 use crate::errors::ScraperError;
-use reqwest::blocking::get;
+use reqwest::get;
 use scraper::{Html, Selector};
 use serde_json::Value;
 use urlencoding::encode;
 
-pub fn verify_id_exists(id: &str) -> bool {
+pub async fn verify_id_exists(id: &str) -> bool {
     let url = format!("https://www.goodreads.com/book/show/{}", id);
-    let response = get(&url).expect("Failed to fetch book page");
+    let response = get(&url).await.expect("Failed to fetch book page");
     response.status().is_success()
 }
 
-pub fn fetch_id_from_isbn(isbn: &str) -> Result<Option<String>, ScraperError> {
+pub async fn fetch_id_from_isbn(isbn: &str) -> Result<Option<String>, ScraperError> {
     let url = format!("https://www.goodreads.com/search?q={}", encode(isbn));
-    let document = Html::parse_document(&get(&url)?.text()?);
+    let document = Html::parse_document(&get(&url).await?.text().await?);
 
     let metadata_selector = Selector::parse(r#"script[id="__NEXT_DATA__"]"#)?;
 
@@ -35,8 +35,8 @@ pub fn fetch_id_from_isbn(isbn: &str) -> Result<Option<String>, ScraperError> {
     Ok(Some(goodreads_id))
 }
 
-pub fn fetch_id_from_title(title: &str) -> Result<Option<String>, ScraperError> {
-    let results = search_books(title)?;
+pub async fn fetch_id_from_title(title: &str) -> Result<Option<String>, ScraperError> {
+    let results = search_books(title).await?;
 
     for (found_title, _, found_id) in results {
         if matches(&found_title, title) {
@@ -47,11 +47,11 @@ pub fn fetch_id_from_title(title: &str) -> Result<Option<String>, ScraperError> 
     Ok(None)
 }
 
-pub fn fetch_id_from_title_and_author(
+pub async fn fetch_id_from_title_and_author(
     title: &str,
     author: &str,
 ) -> Result<Option<String>, ScraperError> {
-    let results = search_books(title)?;
+    let results = search_books(title).await?;
 
     for (found_title, found_author, found_id) in results {
         if matches(&found_title, title) && matches(&found_author, author) {
@@ -59,7 +59,7 @@ pub fn fetch_id_from_title_and_author(
         }
     }
 
-    let results = search_books(&format!("{} {}", title, author))?;
+    let results = search_books(&format!("{} {}", title, author)).await?;
 
     for (found_title, found_author, found_id) in results {
         if matches(&found_title, title) && matches(&found_author, author) {
@@ -70,10 +70,10 @@ pub fn fetch_id_from_title_and_author(
     Ok(None)
 }
 
-fn search_books(query: &str) -> Result<Vec<(String, String, String)>, ScraperError> {
+async fn search_books(query: &str) -> Result<Vec<(String, String, String)>, ScraperError> {
     let url = format!("https://www.goodreads.com/search?q={}", encode(query));
 
-    let document = Html::parse_document(&get(&url)?.text()?);
+    let document = Html::parse_document(&get(&url).await?.text().await?);
     let title_selector = Selector::parse(r#"a[class="bookTitle"]"#)?;
     let author_selector = Selector::parse(r#"a[class="authorName"]"#)?;
 
@@ -125,65 +125,65 @@ fn extract_goodreads_id(url: &str) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn fetch_id_from_title_test() {
+    #[tokio::test]
+    async fn fetch_id_from_title_test() {
         let book_title = "The Last Magician";
         assert_eq!(
-            fetch_id_from_title(book_title).unwrap(),
+            fetch_id_from_title(book_title).await.unwrap(),
             Some("30312855".to_string())
         );
     }
 
-    #[test]
-    fn fetch_id_from_title_not_found_test() {
+    #[tokio::test]
+    async fn fetch_id_from_title_not_found_test() {
         let book_title = "thistitledoesnotexist";
-        assert_eq!(fetch_id_from_title(book_title).unwrap(), None);
+        assert_eq!(fetch_id_from_title(book_title).await.unwrap(), None);
     }
 
-    #[test]
-    fn fetch_id_from_title_and_author_test() {
+    #[tokio::test]
+    async fn fetch_id_from_title_and_author_test() {
         let book_title = "Fire";
         let book_author = "Kristin Cashore";
         assert_eq!(
-            fetch_id_from_title_and_author(book_title, book_author).unwrap(),
+            fetch_id_from_title_and_author(book_title, book_author).await.unwrap(),
             Some("6137154".to_string())
         );
     }
 
-    #[test]
-    fn fetch_id_from_title_and_author_not_found_test() {
+    #[tokio::test]
+    async fn fetch_id_from_title_and_author_not_found_test() {
         let book_title = "thistitledoesnotexist";
         let book_author = "noauthor";
         assert_eq!(
-            fetch_id_from_title_and_author(book_title, book_author).unwrap(),
+            fetch_id_from_title_and_author(book_title, book_author).await.unwrap(),
             None
         );
     }
 
-    #[test]
-    fn fetch_id_from_isbn_test() {
+    #[tokio::test]
+    async fn fetch_id_from_isbn_test() {
         let isbn = "9780063021426";
         assert_eq!(
-            fetch_id_from_isbn(isbn).unwrap(),
+            fetch_id_from_isbn(isbn).await.unwrap(),
             Some("57945316".to_string())
         )
     }
 
-    #[test]
-    fn fetch_id_from_isbn_not_found_test() {
+    #[tokio::test]
+    async fn fetch_id_from_isbn_not_found_test() {
         let isbn = "1234001592323";
-        assert_eq!(fetch_id_from_isbn(isbn).unwrap(), None);
+        assert_eq!(fetch_id_from_isbn(isbn).await.unwrap(), None);
     }
 
-    #[test]
-    fn verify_id_exists_test() {
+    #[tokio::test]
+    async fn verify_id_exists_test() {
         let id = "57945316";
-        assert_eq!(verify_id_exists(id), true);
+        assert_eq!(verify_id_exists(id).await, true);
     }
 
-    #[test]
-    fn verify_id_not_found_test() {
+    #[tokio::test]
+    async fn verify_id_not_found_test() {
         let id = "bad_id";
-        assert_eq!(verify_id_exists(id), false);
+        assert_eq!(verify_id_exists(id).await, false);
     }
 }

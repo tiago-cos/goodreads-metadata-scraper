@@ -2,47 +2,51 @@ use grscraper::{
     BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder,
 };
 
-#[test]
-fn fetch_metadata_by_title_test() {
+#[tokio::test]
+async fn fetch_metadata_by_title_test() {
     let title = "The Last Magician";
     let metadata = MetadataRequestBuilder::default()
         .with_title(title)
         .execute()
+        .await
         .unwrap();
 
     verify_metadata(metadata);
 }
 
-#[test]
-fn fetch_metadata_by_id_test() {
+#[tokio::test]
+async fn fetch_metadata_by_id_test() {
     let id = "30312855";
     let metadata = MetadataRequestBuilder::default()
         .with_id(id)
         .execute()
+        .await
         .unwrap();
 
     verify_metadata(metadata);
 }
 
-#[test]
-fn fetch_metadata_by_isbn_test() {
+#[tokio::test]
+async fn fetch_metadata_by_isbn_test() {
     let isbn = "1481432079";
     let metadata = MetadataRequestBuilder::default()
         .with_isbn(isbn)
         .execute()
+        .await
         .unwrap();
 
     verify_metadata(metadata);
 }
 
-#[test]
-fn fetch_metadata_by_title_with_author_test() {
+#[tokio::test]
+async fn fetch_metadata_by_title_with_author_test() {
     let title = "The Last Magician";
     let author = "Lisa Maxwell";
     let metadata = MetadataRequestBuilder::default()
         .with_title(title)
         .with_author(author)
         .execute()
+        .await
         .unwrap();
 
     verify_metadata(metadata);

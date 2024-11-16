@@ -31,15 +31,19 @@
 //! ```rust
 //! use grscraper::MetadataRequestBuilder;
 //!
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), grscraper::ScraperError> {
 //! let isbn = "9780141381473";
 //! let metadata = MetadataRequestBuilder::default()
 //!     .with_isbn(isbn)
-//!     .execute()?
+//!     .execute()
+//!     .await?
 //!     .expect("Book not found");
 //!
 //! assert_eq!(metadata.title, "The Lightning Thief");
 //! println!("{:?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
+//! # }
 //! ```
 //!
 //! ### Fetching Metadata by Goodreads ID
@@ -47,15 +51,19 @@
 //! ```rust
 //! use grscraper::MetadataRequestBuilder;
 //!
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), grscraper::ScraperError> {
 //! let goodreads_id = "175254";
 //! let metadata = MetadataRequestBuilder::default()
 //!     .with_id(goodreads_id)
-//!     .execute()?
+//!     .execute()
+//!     .await?
 //!     .expect("Book not found");
 //! 
 //! assert_eq!(metadata.title, "Pride and Prejudice");
 //! println!("{:?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
+//! # }
 //! ```
 //!
 //! ### Fetching Metadata by Title and Author
@@ -65,17 +73,21 @@
 //! ```rust
 //! use grscraper::MetadataRequestBuilder;
 //!
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), grscraper::ScraperError> {
 //! let title = "The Last Magician";
 //! let author = "Lisa Maxwell";
 //! let metadata = MetadataRequestBuilder::default()
 //!     .with_title(title)
 //!     .with_author(author)
-//!     .execute()?
+//!     .execute()
+//!     .await?
 //!     .expect("Book not found");
 //!
 //! assert_eq!(metadata.title, title);
 //! println!("{:?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
+//! # }
 //! ```
 //!
 //! ## Limitations
