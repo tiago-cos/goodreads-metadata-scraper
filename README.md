@@ -1,6 +1,6 @@
 # Goodreads Metadata Scraper
 
-A Rust library to fetch and scrape book metadata from Goodreads by using an ISBN, Goodreads book ID, or a combination of title and author. This library is useful for applications that need book data from Goodreads without access to an official API.
+An async Rust library to fetch and scrape book metadata from Goodreads by using an ISBN, Goodreads book ID, or a combination of title and author. This library is useful for applications that need book data from Goodreads without access to an official API.
 
 ## Features
 
@@ -31,7 +31,8 @@ use grscraper::MetadataRequestBuilder;
 let isbn = "9780141381473";
 let metadata = MetadataRequestBuilder::default()
     .with_isbn(isbn)
-    .execute()?
+    .execute()
+    .await?
     .expect("Book not found");
 
 assert_eq!(metadata.title, "The Lightning Thief");
@@ -46,7 +47,8 @@ use grscraper::MetadataRequestBuilder;
 let goodreads_id = "175254";
 let metadata = MetadataRequestBuilder::default()
     .with_id(goodreads_id)
-    .execute()?
+    .execute()
+    .await?
     .expect("Book not found");
 
 assert_eq!(metadata.title, "Pride and Prejudice");
@@ -65,7 +67,8 @@ let author = "Lisa Maxwell";
 let metadata = MetadataRequestBuilder::default()
     .with_title(title)
     .with_author(author)
-    .execute()?
+    .execute()
+    .await?
     .expect("Book not found");
 
 assert_eq!(metadata.title, title);

@@ -27,6 +27,10 @@ pub struct BookMetadata {
     pub genres: Vec<String>,
     /// The series information, if the book is part of a series, represented as a `BookSeries`.
     pub series: Option<BookSeries>,
+    /// The number of pages in the book, if available.
+    pub page_count: Option<i64>,
+    /// The language of the book, if available.
+    pub language: Option<String>,
     /// A URL to an image of the book's cover, if available.
     pub image_url: Option<String>,
 }
@@ -61,6 +65,8 @@ pub async fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperE
     let publisher = extract_publisher(&metadata, &amazon_id);
     let publication_date = extract_publication_date(&metadata, &amazon_id);
     let isbn = extract_isbn(&metadata, &amazon_id);
+    let page_count = extract_page_count(&metadata, &amazon_id);
+    let language = extract_language(&metadata, &amazon_id);
     let series = extract_series(&metadata, &amazon_id);
 
     let metadata = BookMetadata::new(
@@ -73,6 +79,8 @@ pub async fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperE
         contributors,
         genres,
         series,
+        page_count,
+        language,
         image_url,
     );
 
@@ -185,6 +193,16 @@ fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
     to_string(isbn)
 }
 
+fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
+    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"]
+        .as_i64()
+}
+
+fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
+    let language = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["language"]["name"];
+    to_string(language)
+}
+
 fn extract_series(metadata: &Value, amazon_id: &str) -> Option<BookSeries> {
     let series_array = metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookSeries"]
         .as_array()
@@ -258,6 +276,8 @@ mod tests {
             expected_contributors,
             expected_genres,
             expected_series,
+            Some(381),
+            Some("English".to_string()),
             Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1723393514i/4556058.jpg".to_string()),
         );
 
