@@ -145,7 +145,9 @@ mod tests {
         let book_title = "Fire";
         let book_author = "Kristin Cashore";
         assert_eq!(
-            fetch_id_from_title_and_author(book_title, book_author).await.unwrap(),
+            fetch_id_from_title_and_author(book_title, book_author)
+                .await
+                .unwrap(),
             Some("6137154".to_string())
         );
     }
@@ -155,7 +157,9 @@ mod tests {
         let book_title = "thistitledoesnotexist";
         let book_author = "noauthor";
         assert_eq!(
-            fetch_id_from_title_and_author(book_title, book_author).await.unwrap(),
+            fetch_id_from_title_and_author(book_title, book_author)
+                .await
+                .unwrap(),
             None
         );
     }
@@ -178,12 +182,12 @@ mod tests {
     #[tokio::test]
     async fn verify_id_exists_test() {
         let id = "57945316";
-        assert_eq!(verify_id_exists(id).await, true);
+        assert!(verify_id_exists(id).await);
     }
 
     #[tokio::test]
     async fn verify_id_not_found_test() {
         let id = "bad_id";
-        assert_eq!(verify_id_exists(id).await, false);
+        assert!(!(verify_id_exists(id).await));
     }
 }
