@@ -16,7 +16,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-goodreads-metadata-scraper = "0.2.0"
+goodreads-metadata-scraper = "0.2.1"
 ```
 
 ## Usage
@@ -36,7 +36,7 @@ let metadata = MetadataRequestBuilder::default()
     .expect("Book not found");
 
 assert_eq!(metadata.title, "The Lightning Thief");
-println!("{:?}", metadata);
+println!("{:#?}", metadata);
 ```
 
 ### Fetching Metadata by Goodreads ID
@@ -52,7 +52,7 @@ let metadata = MetadataRequestBuilder::default()
     .expect("Book not found");
 
 assert_eq!(metadata.title, "Pride and Prejudice");
-println!("{:?}", metadata);
+println!("{:#?}", metadata);
 ```
 
 ### Fetching Metadata by Title and Author
@@ -72,7 +72,7 @@ let metadata = MetadataRequestBuilder::default()
     .expect("Book not found");
 
 assert_eq!(metadata.title, title);
-println!("{:?}", metadata);
+println!("{:#?}", metadata);
 ```
 
 ## Error Handling

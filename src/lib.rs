@@ -18,7 +18,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! goodreads-metadata-scraper = "0.1.0"
+//! goodreads-metadata-scraper = "0.2.1"
 //! ```
 //!
 //! ## Examples
@@ -41,7 +41,7 @@
 //!     .expect("Book not found");
 //!
 //! assert_eq!(metadata.title, "The Lightning Thief");
-//! println!("{:?}", metadata);
+//! println!("{:#?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
 //! # }
 //! ```
@@ -59,9 +59,9 @@
 //!     .execute()
 //!     .await?
 //!     .expect("Book not found");
-//! 
+//!
 //! assert_eq!(metadata.title, "Pride and Prejudice");
-//! println!("{:?}", metadata);
+//! println!("{:#?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
 //! # }
 //! ```
@@ -85,7 +85,7 @@
 //!     .expect("Book not found");
 //!
 //! assert_eq!(metadata.title, title);
-//! println!("{:?}", metadata);
+//! println!("{:#?}", metadata);
 //! # Ok::<(), grscraper::ScraperError>(())
 //! # }
 //! ```
@@ -94,7 +94,7 @@
 //!
 //! - Since this library relies on web scraping, it may be sensitive to changes in Goodreads' website structure.
 //! - This library is intended for personal or small-scale use, as frequent requests to Goodreads may be rate-limited.
-//! 
+//!
 //! **Note:** When running tests, it is highly recommended to run them with the `--test-threads=1` flag to avoid rate-limiting issues with Goodreads.
 //!
 //! ## License

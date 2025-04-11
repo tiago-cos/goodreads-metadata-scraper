@@ -157,7 +157,7 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributo
         contributors.push(fetch_contributor(metadata, (role, key)));
     }
 
-    contributors
+    contributors.into_iter().filter(|s| !s.name.eq("unknown author")).collect()
 }
 
 fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> BookContributor {
@@ -198,7 +198,11 @@ fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64()
+    let count = metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64();
+    match count {
+        Some(0) => return None,
+        c => return c,
+    }
 }
 
 fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
@@ -236,6 +240,7 @@ fn to_string(value: &Value) -> Option<String> {
         .as_str()
         .map(|s| s.trim())
         .map(|s| re.replace_all(s, " ").to_string())
+        .filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]
