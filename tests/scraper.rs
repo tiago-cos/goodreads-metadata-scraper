@@ -1,6 +1,4 @@
-use grscraper::{
-    BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder,
-};
+use grscraper::{BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder};
 
 #[tokio::test]
 async fn fetch_metadata_by_title_test() {
@@ -29,6 +27,18 @@ async fn fetch_metadata_by_id_test() {
 #[tokio::test]
 async fn fetch_metadata_by_isbn_test() {
     let isbn = "1481432079";
+    let metadata = MetadataRequestBuilder::default()
+        .with_isbn(isbn)
+        .execute()
+        .await
+        .unwrap();
+
+    verify_metadata(metadata);
+}
+
+#[tokio::test]
+async fn fetch_metadata_by_isbn_bad_time_test() {
+    let isbn = " 9788467271300";
     let metadata = MetadataRequestBuilder::default()
         .with_isbn(isbn)
         .execute()

@@ -182,10 +182,14 @@ fn extract_publisher(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTime<Utc>> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"]
-        .as_i64()
-        .map(DateTime::from_timestamp_millis)
-        .expect("Publication date must be a timestamp")
+    match &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"] {
+        Value::Null => None,
+        Value::Number(number) => number
+            .as_i64()
+            .map(DateTime::from_timestamp_millis)
+            .expect("Publication date must be a timestamp"),
+        _ => panic!("Publication date must be a timestamp"),
+    }
 }
 
 fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
@@ -194,12 +198,12 @@ fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"]
-        .as_i64()
+    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64()
 }
 
 fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
-    let language = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["language"]["name"];
+    let language =
+        &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["language"]["name"];
     to_string(language)
 }
 
