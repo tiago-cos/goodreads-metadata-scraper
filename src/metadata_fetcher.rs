@@ -157,7 +157,7 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributo
         contributors.push(fetch_contributor(metadata, (role, key)));
     }
 
-    contributors
+    contributors.into_iter().filter(|s| !s.name.eq("unknown author")).collect()
 }
 
 fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> BookContributor {
@@ -182,10 +182,14 @@ fn extract_publisher(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTime<Utc>> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"]
-        .as_i64()
-        .map(DateTime::from_timestamp_millis)
-        .expect("Publication date must be a timestamp")
+    match &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"] {
+        Value::Null => None,
+        Value::Number(number) => number
+            .as_i64()
+            .map(DateTime::from_timestamp_millis)
+            .expect("Publication date must be a timestamp"),
+        _ => panic!("Publication date must be a timestamp"),
+    }
 }
 
 fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
@@ -194,12 +198,16 @@ fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"]
-        .as_i64()
+    let count = metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64();
+    match count {
+        Some(0) => return None,
+        c => return c,
+    }
 }
 
 fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
-    let language = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["language"]["name"];
+    let language =
+        &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["language"]["name"];
     to_string(language)
 }
 
@@ -232,6 +240,7 @@ fn to_string(value: &Value) -> Option<String> {
         .as_str()
         .map(|s| s.trim())
         .map(|s| re.replace_all(s, " ").to_string())
+        .filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]

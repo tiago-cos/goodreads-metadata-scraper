@@ -1,6 +1,4 @@
-use grscraper::{
-    BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder,
-};
+use grscraper::{BookContributor, BookMetadata, BookSeries, MetadataRequestBuilder};
 
 #[tokio::test]
 async fn fetch_metadata_by_title_test() {
@@ -36,6 +34,33 @@ async fn fetch_metadata_by_isbn_test() {
         .unwrap();
 
     verify_metadata(metadata);
+}
+
+#[tokio::test]
+async fn fetch_metadata_by_isbn_bad_time_test() {
+    let isbn = "9788467271300";
+    let metadata = MetadataRequestBuilder::default()
+        .with_isbn(isbn)
+        .execute()
+        .await
+        .unwrap();
+
+    let expected_metadata = BookMetadata::new(
+        "El Fuego Invisible".to_string(),
+        None,
+        None,
+        None,
+        None,
+        Some("8467271302".to_string()),
+        Vec::new(),
+        Vec::new(),
+        None,
+        None,
+        Some("Spanish; Castilian".to_string()),
+        None
+    );
+
+    assert_eq!(metadata, Some(expected_metadata));
 }
 
 #[tokio::test]
