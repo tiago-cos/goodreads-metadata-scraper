@@ -7,6 +7,8 @@ pub enum ScraperError {
     FetchError(reqwest::Error),
     /// Error encountered while parsing the HTML document, originating from `scraper`.
     ParseError(scraper::error::SelectorErrorKind<'static>),
+    /// Non-recoverable error encountered while scraping the HTML document. Indicates expected content was missing.
+    ScrapeError(String),
     /// Error encountered during JSON serialization, originating from `serde_json`.
     SerializeError(serde_json::Error),
 }

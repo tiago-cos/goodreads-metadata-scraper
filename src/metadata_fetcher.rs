@@ -1,6 +1,7 @@
 use crate::errors::ScraperError;
 use chrono::{DateTime, Utc};
 use derive_new::new;
+use log::{error, warn};
 use regex::Regex;
 use reqwest::get;
 use scraper::{Html, Selector};
@@ -55,9 +56,9 @@ pub struct BookSeries {
 
 pub async fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperError> {
     let metadata = extract_book_metadata(goodreads_id).await?;
-    let amazon_id = extract_amazon_id(&metadata, goodreads_id);
+    let amazon_id = extract_amazon_id(&metadata, goodreads_id)?;
 
-    let (title, subtitle) = extract_title_and_subtitle(&metadata, &amazon_id);
+    let (title, subtitle) = extract_title_and_subtitle(&metadata, &amazon_id)?;
     let description = extract_description(&metadata, &amazon_id);
     let image_url = extract_image_url(&metadata, &amazon_id);
     let contributors = extract_contributors(&metadata, &amazon_id);
@@ -91,31 +92,56 @@ async fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError
     let url = format!("https://www.goodreads.com/book/show/{}", goodreads_id);
     let document = Html::parse_document(&get(&url).await?.text().await?);
     let metadata_selector = Selector::parse(r#"script[id="__NEXT_DATA__"]"#)?;
-    let metadata: Value = serde_json::from_str(
-        &document
-            .select(&metadata_selector)
-            .next()
-            .expect("Failed to find metadata script")
-            .text()
-            .collect::<String>(),
-    )?;
+    let metadata = &document.select(&metadata_selector).next();
+
+    let metadata = match metadata {
+        None => {
+            error!("Failed to scrape book metadata");
+            return Err(ScraperError::ScrapeError(
+                "Failed to scrape book metadata".to_string(),
+            ));
+        }
+        Some(m) => serde_json::from_str(&m.text().collect::<String>())?,
+    };
+
     Ok(metadata)
 }
 
-fn extract_amazon_id(metadata: &Value, goodreads_id: &str) -> String {
+fn extract_amazon_id(metadata: &Value, goodreads_id: &str) -> Result<String, ScraperError> {
     let amazon_id_key = format!("getBookByLegacyId({{\"legacyId\":\"{}\"}})", goodreads_id);
     let amazon_id =
         &metadata["props"]["pageProps"]["apolloState"]["ROOT_QUERY"][amazon_id_key]["__ref"];
-    to_string(amazon_id).expect("Amazon ID must be present")
+    let amazon_id = match to_string(amazon_id) {
+        None => {
+            error!("Failed to scrape Amazon ID");
+            return Err(ScraperError::ScrapeError(
+                "Failed to scrape Amazon ID".to_string(),
+            ));
+        }
+        Some(id) => id,
+    };
+
+    Ok(amazon_id)
 }
 
-fn extract_title_and_subtitle(metadata: &Value, amazon_id: &str) -> (String, Option<String>) {
+fn extract_title_and_subtitle(
+    metadata: &Value,
+    amazon_id: &str,
+) -> Result<(String, Option<String>), ScraperError> {
     let title = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["title"];
-    let title = to_string(title).expect("Title must be present");
+    let title = match to_string(title) {
+        None => {
+            error!("Failed to scrape book title");
+            return Err(ScraperError::ScrapeError(
+                "Failed to scrape book title".to_string(),
+            ));
+        }
+        Some(t) => t,
+    };
 
     match title.split_once(":") {
-        Some((title, subtitle)) => (title.to_string(), Some(subtitle.trim().to_string())),
-        None => (title.to_string(), None),
+        Some((title, subtitle)) => Ok((title.to_string(), Some(subtitle.trim().to_string()))),
+        None => Ok((title.to_string(), None)),
     }
 }
 
@@ -135,43 +161,74 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributo
     let primary = metadata["props"]["pageProps"]["apolloState"][amazon_id]
         ["primaryContributorEdge"]
         .as_object()
-        .map(|obj| {
-            (
-                to_string(&obj["role"]).expect("Contributor role must be present"),
-                to_string(&obj["node"]["__ref"]).expect("Contributor key must be present"),
-            )
-        })
-        .expect("Primary contributor must be an object");
+        .map(|obj| (to_string(&obj["role"]), to_string(&obj["node"]["__ref"])));
 
-    contributors.push(fetch_contributor(metadata, primary));
-
-    let secondary = metadata["props"]["pageProps"]["apolloState"][amazon_id]
-        ["secondaryContributorEdges"]
-        .as_array()
-        .expect("Secondary contributors must be an array");
-
-    for contributor in secondary {
-        let role = to_string(&contributor["role"]).expect("Contributor role must be present");
-        let key =
-            to_string(&contributor["node"]["__ref"]).expect("Contributor key must be present");
-        contributors.push(fetch_contributor(metadata, (role, key)));
+    match primary {
+        Some((Some(role), Some(reference))) => {
+            if let Some(contributor) = fetch_contributor(metadata, (role, reference)) {
+                contributors.push(contributor);
+            }
+        }
+        Some(_) => {
+            warn!("Failed to parse contributor");
+        }
+        None => (),
     }
 
-    contributors.into_iter().filter(|s| !s.name.eq("unknown author")).collect()
+    let Some(secondary) = metadata["props"]["pageProps"]["apolloState"][amazon_id]
+        ["secondaryContributorEdges"]
+        .as_array()
+    else {
+        return contributors
+            .into_iter()
+            .filter(|s| !s.name.to_lowercase().eq("unknown author"))
+            .collect();
+    };
+
+    for contributor in secondary {
+        let role = to_string(&contributor["role"]);
+        let key = to_string(&contributor["node"]["__ref"]);
+        if role.is_none() || key.is_none() {
+            warn!("Failed to parse contributor");
+            continue;
+        }
+
+        if let Some(contributor) = fetch_contributor(metadata, (role.unwrap(), key.unwrap())) {
+            contributors.push(contributor);
+        }
+    }
+
+    contributors
+        .into_iter()
+        .filter(|s| !s.name.to_lowercase().eq("unknown author"))
+        .collect()
 }
 
-fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> BookContributor {
+fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> Option<BookContributor> {
     let contributor = &metadata["props"]["pageProps"]["apolloState"][key]["name"];
-    let name = to_string(contributor).expect("Contributor name must be present");
-    BookContributor::new(name, role)
+    let name = to_string(contributor);
+    if name.is_none() {
+        warn!("Failed to parse contributor")
+    }
+
+    name.map(|n| BookContributor::new(n, role))
 }
 
 fn extract_genres(metadata: &Value, amazon_id: &str) -> Vec<String> {
-    metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookGenres"]
-        .as_array()
-        .expect("Genres must be an array")
+    let genres = metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookGenres"].as_array();
+
+    let Some(genres) = genres else {
+        return vec![];
+    };
+
+    genres
         .iter()
-        .map(|genre| to_string(&genre["genre"]["name"]).expect("Genre name must be present"))
+        .filter_map(|genre| {
+            to_string(&genre["genre"]["name"]).or_else(|| {
+                warn!("Failed to parse genre name");
+                None
+            })
+        })
         .collect()
 }
 
@@ -184,21 +241,39 @@ fn extract_publisher(metadata: &Value, amazon_id: &str) -> Option<String> {
 fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTime<Utc>> {
     match &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["publicationTime"] {
         Value::Null => None,
-        Value::Number(number) => number
-            .as_i64()
-            .map(DateTime::from_timestamp_millis)
-            .expect("Publication date must be a timestamp"),
+        Value::Number(number) => {
+            let timestamp = number.as_i64().map(DateTime::from_timestamp_millis);
+
+            if timestamp.is_none() {
+                warn!("Failed to parse publication date");
+            }
+
+            timestamp.flatten()
+        }
         _ => panic!("Publication date must be a timestamp"),
     }
 }
 
 fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
     let isbn = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn"];
-    to_string(isbn)
+    match to_string(isbn) {
+        Some(i) => return Some(i),
+        None => (),
+    };
+
+    let isbn13 = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn13"];
+    match to_string(isbn13) {
+        Some(i) => return Some(i),
+        None => (),
+    };
+
+    let asin = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["asin"];
+    to_string(asin)
 }
 
 fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
-    let count = metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64();
+    let count =
+        metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64();
     match count {
         Some(0) => return None,
         c => return c,
@@ -212,26 +287,45 @@ fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
 }
 
 fn extract_series(metadata: &Value, amazon_id: &str) -> Option<BookSeries> {
-    let series_array = metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookSeries"]
-        .as_array()
-        .expect("Book series must be an array");
+    let series_array =
+        match metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookSeries"].as_array() {
+            None => return None,
+            Some(s) => s,
+        };
 
-    if let Some(series) = series_array.first() {
-        let position = series["userPosition"]
-            .as_str()
-            .expect("Series position must be present")
-            .parse::<f32>()
-            .expect("Series position must be a number");
+    let series = match series_array.first() {
+        None => return None,
+        Some(s) => s,
+    };
 
-        let key = to_string(&series["series"]["__ref"]).expect("Series key must be present");
+    let Some(position) = series["userPosition"]
+        .as_str()
+        .map(|s| s.split('-').next().unwrap_or(""))
+        .map(|s| s.parse::<f32>().ok())
+        .flatten()
+    else {
+        warn!("Failed to parse series number");
+        return None;
+    };
 
-        let title = &metadata["props"]["pageProps"]["apolloState"][key]["title"];
-        let title = to_string(title).expect("Series title must be present");
+    let key = match to_string(&series["series"]["__ref"]) {
+        None => {
+            warn!("Failed to parse series key");
+            return None;
+        }
+        Some(k) => k,
+    };
 
-        Some(BookSeries::new(title, position))
-    } else {
-        None
-    }
+    let title = &metadata["props"]["pageProps"]["apolloState"][key]["title"];
+    let title = match to_string(title) {
+        None => {
+            warn!("Failed to parse series title");
+            return None;
+        }
+        Some(t) => t,
+    };
+
+    Some(BookSeries::new(title, position))
 }
 
 fn to_string(value: &Value) -> Option<String> {
@@ -262,12 +356,12 @@ mod tests {
             "Young Adult".to_string(),
             "Mythology".to_string(),
             "Fiction".to_string(),
+            "Percy Jackson".to_string(),
             "Middle Grade".to_string(),
             "Adventure".to_string(),
             "Greek Mythology".to_string(),
             "Urban Fantasy".to_string(),
             "Childrens".to_string(),
-            "Audiobook".to_string(),
         ];
         let expected_metadata = BookMetadata::new(
             "The Last Olympian".to_string(),

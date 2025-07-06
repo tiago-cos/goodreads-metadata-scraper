@@ -18,7 +18,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! goodreads-metadata-scraper = "0.2.1"
+//! goodreads-metadata-scraper = "0.2.2"
 //! ```
 //!
 //! ## Examples

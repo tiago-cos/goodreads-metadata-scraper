@@ -57,7 +57,7 @@ async fn fetch_metadata_by_isbn_bad_time_test() {
         None,
         None,
         Some("Spanish; Castilian".to_string()),
-        None
+        None,
     );
 
     assert_eq!(metadata, Some(expected_metadata));

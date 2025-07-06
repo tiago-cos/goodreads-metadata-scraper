@@ -16,7 +16,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-goodreads-metadata-scraper = "0.2.1"
+goodreads-metadata-scraper = "0.2.2"
 ```
 
 ## Usage
@@ -82,6 +82,7 @@ This crate uses a custom error type, `ScraperError`, which handles errors that m
 - `FetchError`: Errors during HTTP requests (from `reqwest`)
 - `ParseError`: HTML parsing errors (from `scraper`)
 - `SerializeError`: JSON serialization errors (from `serde_json`)
+- `ScrapeError`: Non-recoverable error encountered while scraping the HTML document. Indicates expected content was missing.
 
 ## Limitations
 
