@@ -1,5 +1,8 @@
 # Goodreads Metadata Scraper
 
+[![Crates.io](https://img.shields.io/crates/v/goodreads_metadata_scraper.svg)](https://crates.io/crates/goodreads_metadata_scraper)
+[![Documentation](https://docs.rs/goodreads-metadata-scraper/badge.svg)](https://docs.rs/goodreads_metadata_scraper)
+
 An async Rust library to fetch and scrape book metadata from Goodreads by using an ISBN, Goodreads book ID, or a combination of title and author. This library is useful for applications that need book data from Goodreads without access to an official API.
 
 ## Features
@@ -73,6 +76,39 @@ let metadata = MetadataRequestBuilder::default()
 
 assert_eq!(metadata.title, title);
 println!("{:#?}", metadata);
+```
+
+## Metadata Structure
+
+The returned metadata is structured as follows:
+
+```rust
+pub struct BookMetadata {
+    /// The main title of the book.
+    pub title: String,
+    /// An optional subtitle of the book.
+    pub subtitle: Option<String>,
+    /// An optional description or summary of the book.
+    pub description: Option<String>,
+    /// The publisher of the book, if available.
+    pub publisher: Option<String>,
+    /// The publication date of the book, represented as a UTC datetime.
+    pub publication_date: Option<DateTime<Utc>>,
+    /// The ISBN of the book, if available.
+    pub isbn: Option<String>,
+    /// A list of contributors to the book, each represented as a `BookContributor`.
+    pub contributors: Vec<BookContributor>,
+    /// A list of genres associated with the book.
+    pub genres: Vec<String>,
+    /// The series information, if the book is part of a series, represented as a `BookSeries`.
+    pub series: Option<BookSeries>,
+    /// The number of pages in the book, if available.
+    pub page_count: Option<i64>,
+    /// The language of the book, if available.
+    pub language: Option<String>,
+    /// A URL to an image of the book's cover, if available.
+    pub image_url: Option<String>,
+}
 ```
 
 ## Error Handling
