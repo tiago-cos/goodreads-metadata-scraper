@@ -9,7 +9,7 @@ async fn fetch_metadata_by_title_test() {
         .await
         .unwrap();
 
-    verify_metadata(metadata);
+    verify_metadata(metadata.as_ref());
 }
 
 #[tokio::test]
@@ -21,7 +21,7 @@ async fn fetch_metadata_by_id_test() {
         .await
         .unwrap();
 
-    verify_metadata(metadata);
+    verify_metadata(metadata.as_ref());
 }
 
 #[tokio::test]
@@ -33,7 +33,7 @@ async fn fetch_metadata_by_isbn_test() {
         .await
         .unwrap();
 
-    verify_metadata(metadata);
+    verify_metadata(metadata.as_ref());
 }
 
 #[tokio::test]
@@ -74,10 +74,10 @@ async fn fetch_metadata_by_title_with_author_test() {
         .await
         .unwrap();
 
-    verify_metadata(metadata);
+    verify_metadata(metadata.as_ref());
 }
 
-fn verify_metadata(metadata: Option<BookMetadata>) {
+fn verify_metadata(metadata: Option<&BookMetadata>) {
     let expected_series = BookSeries::new("The Last Magician".to_string(), 1.0);
     let expected_contributors = vec![BookContributor::new(
         "Lisa Maxwell".to_string(),
@@ -119,5 +119,5 @@ fn verify_metadata(metadata: Option<BookMetadata>) {
         Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1468598919i/30312855.jpg".to_string())
     );
 
-    assert_eq!(metadata, Some(expected_metadata));
+    assert_eq!(metadata, Some(expected_metadata).as_ref());
 }

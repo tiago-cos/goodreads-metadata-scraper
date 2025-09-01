@@ -5,7 +5,7 @@ use serde_json::Value;
 use urlencoding::encode;
 
 pub async fn verify_id_exists(id: &str) -> bool {
-    let url = format!("https://www.goodreads.com/book/show/{}", id);
+    let url = format!("https://www.goodreads.com/book/show/{id}");
     let response = get(&url).await.expect("Failed to fetch book page");
     response.status().is_success()
 }
@@ -59,7 +59,7 @@ pub async fn fetch_id_from_title_and_author(
         }
     }
 
-    let results = search_books(&format!("{} {}", title, author)).await?;
+    let results = search_books(&format!("{title} {author}")).await?;
 
     for (found_title, found_author, found_id) in results {
         if matches(&found_title, title) && matches(&found_author, author) {
@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(
             fetch_id_from_isbn(isbn).await.unwrap(),
             Some("57945316".to_string())
-        )
+        );
     }
 
     #[tokio::test]

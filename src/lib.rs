@@ -1,3 +1,7 @@
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_errors_doc)]
+
 //! # Goodreads Metadata Scraper
 //!
 //! This library provides a convenient way to fetch and scrape book metadata from Goodreads by providing either

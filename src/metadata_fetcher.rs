@@ -89,7 +89,7 @@ pub async fn fetch_metadata(goodreads_id: &str) -> Result<BookMetadata, ScraperE
 }
 
 async fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError> {
-    let url = format!("https://www.goodreads.com/book/show/{}", goodreads_id);
+    let url = format!("https://www.goodreads.com/book/show/{goodreads_id}");
     let document = Html::parse_document(&get(&url).await?.text().await?);
     let metadata_selector = Selector::parse(r#"script[id="__NEXT_DATA__"]"#)?;
     let metadata = &document.select(&metadata_selector).next();
@@ -108,17 +108,14 @@ async fn extract_book_metadata(goodreads_id: &str) -> Result<Value, ScraperError
 }
 
 fn extract_amazon_id(metadata: &Value, goodreads_id: &str) -> Result<String, ScraperError> {
-    let amazon_id_key = format!("getBookByLegacyId({{\"legacyId\":\"{}\"}})", goodreads_id);
+    let amazon_id_key = format!("getBookByLegacyId({{\"legacyId\":\"{goodreads_id}\"}})");
     let amazon_id =
         &metadata["props"]["pageProps"]["apolloState"]["ROOT_QUERY"][amazon_id_key]["__ref"];
-    let amazon_id = match to_string(amazon_id) {
-        None => {
-            error!("Failed to scrape Amazon ID");
-            return Err(ScraperError::ScrapeError(
-                "Failed to scrape Amazon ID".to_string(),
-            ));
-        }
-        Some(id) => id,
+    let Some(amazon_id) = to_string(amazon_id) else {
+        error!("Failed to scrape Amazon ID");
+        return Err(ScraperError::ScrapeError(
+            "Failed to scrape Amazon ID".to_string(),
+        ));
     };
 
     Ok(amazon_id)
@@ -129,17 +126,14 @@ fn extract_title_and_subtitle(
     amazon_id: &str,
 ) -> Result<(String, Option<String>), ScraperError> {
     let title = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["title"];
-    let title = match to_string(title) {
-        None => {
-            error!("Failed to scrape book title");
-            return Err(ScraperError::ScrapeError(
-                "Failed to scrape book title".to_string(),
-            ));
-        }
-        Some(t) => t,
+    let Some(title) = to_string(title) else {
+        error!("Failed to scrape book title");
+        return Err(ScraperError::ScrapeError(
+            "Failed to scrape book title".to_string(),
+        ));
     };
 
-    match title.split_once(":") {
+    match title.split_once(':') {
         Some((title, subtitle)) => Ok((title.to_string(), Some(subtitle.trim().to_string()))),
         None => Ok((title.to_string(), None)),
     }
@@ -158,10 +152,10 @@ fn extract_image_url(metadata: &Value, amazon_id: &str) -> Option<String> {
 fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributor> {
     let mut contributors = Vec::new();
 
-    let primary = metadata["props"]["pageProps"]["apolloState"][amazon_id]
-        ["primaryContributorEdge"]
-        .as_object()
-        .map(|obj| (to_string(&obj["role"]), to_string(&obj["node"]["__ref"])));
+    let primary =
+        metadata["props"]["pageProps"]["apolloState"][amazon_id]["primaryContributorEdge"]
+            .as_object()
+            .map(|obj| (to_string(&obj["role"]), to_string(&obj["node"]["__ref"])));
 
     match primary {
         Some((Some(role), Some(reference))) => {
@@ -175,9 +169,9 @@ fn extract_contributors(metadata: &Value, amazon_id: &str) -> Vec<BookContributo
         None => (),
     }
 
-    let Some(secondary) = metadata["props"]["pageProps"]["apolloState"][amazon_id]
-        ["secondaryContributorEdges"]
-        .as_array()
+    let Some(secondary) =
+        metadata["props"]["pageProps"]["apolloState"][amazon_id]["secondaryContributorEdges"]
+            .as_array()
     else {
         return contributors
             .into_iter()
@@ -208,7 +202,7 @@ fn fetch_contributor(metadata: &Value, (role, key): (String, String)) -> Option<
     let contributor = &metadata["props"]["pageProps"]["apolloState"][key]["name"];
     let name = to_string(contributor);
     if name.is_none() {
-        warn!("Failed to parse contributor")
+        warn!("Failed to parse contributor");
     }
 
     name.map(|n| BookContributor::new(n, role))
@@ -256,16 +250,14 @@ fn extract_publication_date(metadata: &Value, amazon_id: &str) -> Option<DateTim
 
 fn extract_isbn(metadata: &Value, amazon_id: &str) -> Option<String> {
     let isbn = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn"];
-    match to_string(isbn) {
-        Some(i) => return Some(i),
-        None => (),
-    };
+    if let Some(i) = to_string(isbn) {
+        return Some(i);
+    }
 
     let isbn13 = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["isbn13"];
-    match to_string(isbn13) {
-        Some(i) => return Some(i),
-        None => (),
-    };
+    if let Some(i) = to_string(isbn13) {
+        return Some(i);
+    }
 
     let asin = &metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["asin"];
     to_string(asin)
@@ -275,8 +267,8 @@ fn extract_page_count(metadata: &Value, amazon_id: &str) -> Option<i64> {
     let count =
         metadata["props"]["pageProps"]["apolloState"][amazon_id]["details"]["numPages"].as_i64();
     match count {
-        Some(0) => return None,
-        c => return c,
+        Some(0) => None,
+        c => c,
     }
 }
 
@@ -288,41 +280,28 @@ fn extract_language(metadata: &Value, amazon_id: &str) -> Option<String> {
 
 fn extract_series(metadata: &Value, amazon_id: &str) -> Option<BookSeries> {
     let series_array =
-        match metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookSeries"].as_array() {
-            None => return None,
-            Some(s) => s,
-        };
+        metadata["props"]["pageProps"]["apolloState"][amazon_id]["bookSeries"].as_array()?;
 
-    let series = match series_array.first() {
-        None => return None,
-        Some(s) => s,
-    };
+    let series = series_array.first()?;
 
     let Some(position) = series["userPosition"]
         .as_str()
         .map(|s| s.split('-').next().unwrap_or(""))
-        .map(|s| s.parse::<f32>().ok())
-        .flatten()
+        .and_then(|s| s.parse::<f32>().ok())
     else {
         warn!("Failed to parse series number");
         return None;
     };
 
-    let key = match to_string(&series["series"]["__ref"]) {
-        None => {
-            warn!("Failed to parse series key");
-            return None;
-        }
-        Some(k) => k,
+    let Some(key) = to_string(&series["series"]["__ref"]) else {
+        warn!("Failed to parse series key");
+        return None;
     };
 
     let title = &metadata["props"]["pageProps"]["apolloState"][key]["title"];
-    let title = match to_string(title) {
-        None => {
-            warn!("Failed to parse series title");
-            return None;
-        }
-        Some(t) => t,
+    let Some(title) = to_string(title) else {
+        warn!("Failed to parse series title");
+        return None;
     };
 
     Some(BookSeries::new(title, position))
@@ -332,7 +311,7 @@ fn to_string(value: &Value) -> Option<String> {
     let re = Regex::new(r"\s{2,}").expect("Regex must be valid");
     value
         .as_str()
-        .map(|s| s.trim())
+        .map(str::trim)
         .map(|s| re.replace_all(s, " ").to_string())
         .filter(|s| !s.is_empty())
 }

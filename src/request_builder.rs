@@ -3,7 +3,7 @@ use crate::{
     goodreads_id_fetcher::{
         fetch_id_from_isbn, fetch_id_from_title, fetch_id_from_title_and_author, verify_id_exists,
     },
-    metadata_fetcher::{fetch_metadata, BookMetadata},
+    metadata_fetcher::{BookMetadata, fetch_metadata},
 };
 
 pub trait RequestState {}
