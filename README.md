@@ -126,11 +126,3 @@ This crate uses a custom error type, `ScraperError`, which handles errors that m
 - This library is intended for personal or small-scale use, as frequent requests to Goodreads may be rate-limited.
 
 **Note:** When running tests, it is highly recommended to run them with the `--test-threads=1` flag to avoid rate-limiting issues with Goodreads.
-
-## License
-
-This project is licensed under the GNU General Public License (GPL). See the [LICENSE](./LICENSE) file for more details.
-
----
-
-This library provides an accessible alternative for retrieving Goodreads book metadata, enabling developers to integrate Goodreads data without an official API. Feel free to contribute by submitting issues or pull requests!

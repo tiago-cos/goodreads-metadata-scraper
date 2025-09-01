@@ -97,9 +97,6 @@
 //!
 //! **Note:** When running tests, it is highly recommended to run them with the `--test-threads=1` flag to avoid rate-limiting issues with Goodreads.
 //!
-//! ## License
-//!
-//! This project is licensed under the GNU General Public License (GPL).
 //!
 
 mod errors;
