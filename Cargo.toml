@@ -1,6 +1,6 @@
 [package]
 name = "goodreads-metadata-scraper"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 authors = ["tiago.costa.sousa@proton.me"]
 description = "A simple library to scrape book metadata from Goodreads"

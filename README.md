@@ -19,7 +19,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-goodreads-metadata-scraper = "0.2.3"
+goodreads-metadata-scraper = "0.2.4"
 ```
 
 ## Usage

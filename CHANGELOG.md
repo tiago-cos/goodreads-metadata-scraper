@@ -5,18 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2025-09-1
+
+### Changed
+
+- Library versions.
+
+### Fixed
+
+- ParserError made thread-safe.
+
 ## [0.2.3] - 2025-08-16
 
 ### Changed
 
-- Library versions
-- Library no longer depends on OpenSSL
+- Library versions.
+- Library no longer depends on OpenSSL.
 
 ## [0.2.2] - 2025-07-6
 
 ### Changed
 
-- Library versions
+- Library versions.
 
 ### Fixed
 
@@ -25,13 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Logging
+- Logging.
 
 ## [0.2.1] - 2025-04-11
 
 ### Changed
 
-- Library versions
+- Library versions.
 
 ### Fixed
 
