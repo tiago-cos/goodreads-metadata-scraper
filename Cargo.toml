@@ -17,7 +17,7 @@ derive-new = "0.7.0"
 log = "0.4.27"
 regex = "1.11.1"
 reqwest = { version = "0.12.23", default-features = false, features = ["rustls-tls", "json"] }
-scraper = "0.23.1"
+scraper = "0.24.0"
 serde_json = "1.0.142"
 urlencoding = "2.1.3"
 
