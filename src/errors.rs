@@ -6,7 +6,7 @@ pub enum ScraperError {
     /// Error that occurs during the HTTP request to Goodreads, originating from `reqwest`.
     FetchError(reqwest::Error),
     /// Error encountered while parsing the HTML document, originating from `scraper`.
-    ParseError(scraper::error::SelectorErrorKind<'static>),
+    ParseError(String),
     /// Non-recoverable error encountered while scraping the HTML document. Indicates expected content was missing.
     ScrapeError(String),
     /// Error encountered during JSON serialization, originating from `serde_json`.
@@ -21,7 +21,7 @@ impl From<reqwest::Error> for ScraperError {
 
 impl From<SelectorErrorKind<'static>> for ScraperError {
     fn from(error: SelectorErrorKind<'static>) -> Self {
-        ScraperError::ParseError(error)
+        ScraperError::ParseError(error.to_string())
     }
 }
 
