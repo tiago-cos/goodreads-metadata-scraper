@@ -360,7 +360,7 @@ mod tests {
             expected_series,
             Some(381),
             Some("English".to_string()),
-            Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1723393514i/4556058.jpg".to_string()),
+            Some("https://m.media-amazon.com/images/S/compressed.photo.goodreads.com/books/1723393514i/4556058.jpg".to_string()),
         );
 
         let metadata = fetch_metadata("4556058").await.unwrap();

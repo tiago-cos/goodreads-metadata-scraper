@@ -116,7 +116,7 @@ fn verify_metadata(metadata: Option<&BookMetadata>) {
         Some(expected_series),
         Some(500),
         Some("English".to_string()),
-        Some("https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1468598919i/30312855.jpg".to_string())
+        Some("https://m.media-amazon.com/images/S/compressed.photo.goodreads.com/books/1468598919i/30312855.jpg".to_string())
     );
 
     assert_eq!(metadata, Some(expected_metadata).as_ref());
