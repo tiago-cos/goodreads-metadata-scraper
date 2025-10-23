@@ -1,7 +1,7 @@
 # Goodreads Metadata Scraper
 
 [![Crates.io](https://img.shields.io/crates/v/goodreads_metadata_scraper.svg)](https://crates.io/crates/goodreads_metadata_scraper)
-[![Documentation](https://docs.rs/goodreads-metadata-scraper/badge.svg)](https://docs.rs/goodreads_metadata_scraper)
+[![Documentation](https://img.shields.io/docsrs/goodreads-metadata-scraper)](https://docs.rs/goodreads_metadata_scraper)
 
 An async Rust library to fetch and scrape book metadata from Goodreads by using an ISBN, Goodreads book ID, or a combination of title and author. This library is useful for applications that need book data from Goodreads without access to an official API.
 
