@@ -15,8 +15,8 @@ categories = ["web-programming"]
 chrono = "0.4.43"
 derive-new = "0.7.0"
 log = "0.4.29"
-regex = "1.12.2"
-reqwest = { version = "0.13.1", default-features = false, features = ["rustls", "json"] }
+regex = "1.12.3"
+reqwest = { version = "0.13.2", default-features = false, features = ["rustls", "json"] }
 scraper = "0.25.0"
 serde_json = "1.0.149"
 urlencoding = "2.1.3"
