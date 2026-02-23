@@ -12,7 +12,7 @@ keywords = ["goodreads", "metadata", "scraper", "books", "library"]
 categories = ["web-programming"]
 
 [dependencies]
-chrono = "0.4.43"
+chrono = "0.4.44"
 derive-new = "0.7.0"
 log = "0.4.29"
 regex = "1.12.3"
