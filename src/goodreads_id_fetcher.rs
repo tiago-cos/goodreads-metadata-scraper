@@ -74,25 +74,34 @@ async fn search_books(query: &str) -> Result<Vec<(String, String, String)>, Scra
     let url = format!("https://www.goodreads.com/search?q={}", encode(query));
 
     let document = Html::parse_document(&get(&url).await?.text().await?);
+    let book_selector = Selector::parse(r#"tr[itemtype="http://schema.org/Book"]"#)?;
     let title_selector = Selector::parse(r#"a[class="bookTitle"]"#)?;
     let author_selector = Selector::parse(r#"a[class="authorName"]"#)?;
 
     let mut results = Vec::new();
 
-    for (title, author) in document
-        .select(&title_selector)
-        .zip(document.select(&author_selector))
-    {
-        let found_title = title.text().collect::<String>();
-        let found_author = author.text().collect::<String>();
-        let found_link = title
-            .value()
-            .attr("href")
-            .expect("Failed to extract link from search result");
+    for book in document.select(&book_selector) {
+        let Some(title) = book.select(&title_selector).next() else {
+            continue;
+        };
+
+        let found_title = title.text().collect::<String>().trim().to_string();
+
+        let Some(found_link) = title.value().attr("href") else {
+            continue;
+        };
+
         let found_id = extract_goodreads_id(found_link);
 
-        results.push((found_title, found_author, found_id));
+        let found_authors = book
+            .select(&author_selector)
+            .map(|author| author.text().collect::<String>().trim().to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        results.push((found_title, found_authors, found_id));
     }
+
     Ok(results)
 }
 
